@@ -1,0 +1,69 @@
+# Opcodes and mnemonics of MIXAL.
+# From the endpapers in Knuth.
+# 
+# A `-' in the mnemonic stands for any of the general
+# registers (A, X, and 1 through 6).  The C value then
+# is the opcode for register A; the other opcodes are
+# at a constant offset for each register.
+#
+# C is the opcode, or `x' for directives.
+#
+# F is the default F value for operands ((0:5) if blank).
+# 
+# An `x' in `field?' means the operand to an intruction
+# of the given type must NOT specify the F value, because
+# F is hardwired.  
+#
+# OP	C	F	field?
+#-----------------------------
+nop	00	0
+add	01
+sub	02
+mul	03
+div	04
+num	05	0	x
+char	05	1	x
+hlt	05	2	x
+sla	06	0	x
+sra	06	1	x
+slax	06	2	x
+srax	06	3	x
+slc	06	4	x
+src	06	5	x
+move	07	1
+ld-	08
+ld-n	16
+st-	24
+stj	32	2
+stz	33
+jbus	34	0	
+ioc	35	0
+in	36	0
+out	37	0
+jred	38	0	
+jmp	39	0	x
+jsj	39	1	x
+jov	39	2	x
+jnov	39	3	x
+jl	39	4	x
+je	39	5	x
+jg	39	6	x
+jge	39	7	x
+jne	39	8	x
+jle	39	9	x
+j-n	40	0	x
+j-z	40	1	x
+j-p	40	2	x
+j-nn	40	3	x
+j-nz	40	4	x
+j-np	40	5	x
+inc-	48	0	x
+dec-	48	1	x
+ent-	48	2	x
+enn-	48	3	x
+cmp-	56
+orig	x
+equ	x
+alf	x
+con	x
+end	x

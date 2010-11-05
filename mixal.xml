@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+                   "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
+<refentry id='mixal1'>
+<refmeta>
+<refentrytitle>MIXAL</refentrytitle>
+<manvolnum>1</manvolnum>
+<refmiscinfo class='date'>18 May 2003</refmiscinfo>
+<refmiscinfo class='source'>Retrocomputing Museum</refmiscinfo>
+<refmiscinfo class='manual'>Mixal user's manual</refmiscinfo>
+</refmeta>
+<refnamediv id='name'>
+<refname>mixal</refname>
+<refpurpose>a load-and-go MIX assembler</refpurpose>
+</refnamediv>
+<refsynopsisdiv id='synopsis'>
+<cmdsynopsis>
+  <command>mixal</command>    
+    <arg choice='opt' rep='repeat'><replaceable>file</replaceable></arg>
+</cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id='description'><title>DESCRIPTION</title>
+<para><application>mixal</application> is an implementation of the
+hypothetical <acronym>MIX</acronym> computer and its assembly language
+called <acronym>MIXAL</acronym>.  The computer was designed by Donald
+Knuth for use in his monumental and yet to be finished book series
+<citetitle>The Art of Computer Programming</citetitle>.  All programs
+and all programming exercises in the book are written in the
+<acronym>MIXAL</acronym> language.</para>
+
+<para>This implementation is a load-and-go assembler, meaning that you
+provide it with a <acronym>MIXAL</acronym> program source, which it
+translates into <acronym>MIX</acronym> machine code, which it promptly
+executes by acting as a <acronym>MIX</acronym> emulator.</para>
+
+<para>You give <application>mixal</application> zero or more
+<acronym>MIXAL</acronym> program source files in the command line,
+which the program interprets.  If you give it no arguments, it expects
+to find a program in the standard input stream.  After the program has
+executed, the final state of the machine registers is printed to the
+standard output stream.</para>
+
+<para>The card punch and line printer devices are connected to the standard
+input and output stream, respectively.  Console input and output are
+connected to standard input and output, and the disk devices are
+connected to files named diskN in the current directory, where N is
+the device number.  Those files are created on demand.</para>
+
+<para>There is one significant difference between the MIXAL input
+language and MIX as originally described by Knuth: Knuth puts fields
+at fixed offsets on a line, while this implementation expects them to
+be separated by whitespace.  (Purists may wish to fix this obvious
+bug.)  Since the ALF directive, which defines constant strings,
+becomes ambiguous when delimited by whitespace, there's a new syntax
+to achieve the same effect. Instead of
+
+<programlisting>
+	ALF	 rime
+</programlisting>
+
+use
+
+<programlisting>
+	CON	" rime"
+</programlisting>
+</para>
+</refsect1>
+
+<refsect1 id='bugs'><title>BUGS</title>
+<para>This <acronym>MIXAL</acronym> implementation does not do
+floating-point.  The tape devices are not implemented.</para>
+</refsect1>
+
+<refsect1 id='author'><title>AUTHOR</title>
+<para>This <acronym>MIXAL</acronym> implementation was designed and
+written by Darius Bacon, and then ported to Unixish systems and
+debugged by Eric S. Raymond.  This version includes corrections to
+multiplication and division by Larry Gately.  This manual page was
+written for Debian by Antti-Juhani Kaijanaho, with changes by Darius
+Bacon and Eric S. Raymond.</para>
+
+<para>The MIXAL language was designed by Donald Knuth.  We gratefully
+acknowledge the general permission granted by Dr. Knuth and Addison-Wesley to
+redistribute MIX documentation and examples from <citetitle>The Art of
+Computer Programming</citetitle> in connection with open-source
+implementations of the language and under the license terms of those
+implementations.</para>
+</refsect1>
+
+<refsect1 id='see_also'><title>SEE ALSO</title>
+<para>The files <filename>/usr/share/doc/mixal/README</filename> and
+<filename>/usr/share/doc/mixal/NOTES</filename> contain some
+information about this <acronym>MIXAL</acronym> implementation.</para>
+
+<para>A description of the <acronym>MIX</acronym> system and the
+<acronym>MIXAL</acronym> language can be found in Donald E. Knuth's
+book <citetitle>The Art of Computer Programming</citetitle>, Volume 1:
+<citetitle>Fundamental Algorithms</citetitle>; 3rd Edition
+(Addison-Wesley 1997).  (Or see the home page at <ulink
+url='http://www-cs-faculty.stanford.edu/~knuth/taocp.html'>http://www-cs-faculty.stanford.edu/~knuth/taocp.html</ulink>.)</para>
+</refsect1>
+</refentry>
+

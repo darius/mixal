@@ -1,0 +1,305 @@
+*** The elevator simulation
+in	equ	1:1		Definition of fields
+llink1	equ	2:3		   within nodes
+rlink1	equ	4:5
+nextinst equ	0:2
+out	equ	1:1
+llink2	equ	2:3
+rlink2	equ	4:5
+*** Fixed-size tables and list heads
+wait	con	*+2(llink1),*+2(rlink1)		List head for WAIT list
+	con	0				   NEXTTIME = 0 always
+man1	con	*-2(llink1),*-2(rlink1)		This node represents action
+	con	0				   M1 and it is initially the
+	jmp	M1				   sole entry in the WAIT list.
+elev1	con	0				This node represents the
+	con	0				   elevator actions, except
+	jmp	E1				   for E5 and E9.
+elev2	con	0				This node represents the
+	con	0				   independent elevator
+	jmp	E5				   at E5.
+elev3	con	0				This node represents the
+	con	0				   independent elevator
+	jmp	E9				   at E9.
+avail	con	0				Link to available nodes
+time	con	0				Current simulated time
+queue	equ	*-3
+	con	*-3(llink2),*-3(rlink2)		List head for QUEUE[0]
+	con	*-3(llink2),*-3(rlink2)		List head for QUEUE[1]
+	con	*-3(llink2),*-3(rlink2)		All queues initially
+	con	*-3(llink2),*-3(rlink2)		   are empty
+	con	*-3(llink2),*-3(rlink2)		List head for QUEUE[4]
+elevator equ	*-3
+	con	*-3(llink2),*-3(rlink2)		List head for ELEVATOR
+	con	0
+	con	0				"Padding" for CALL table
+	con	0				   (see lines 183-186)
+	con	0
+call	con	0				CALLUP[0], CALLCAR[0], CALLDOWN[0]
+	con	0				CALLUP[1], CALLCAR[1], CALLDOWN[1]
+	con	0				CALLUP[2], CALLCAR[2], CALLDOWN[2]
+	con	0				CALLUP[3], CALLCAR[3], CALLDOWN[3]
+	con	0				CALLUP[4], CALLCAR[4], CALLDOWN[4]
+	con	0
+	con	0				"Padding" for CALL table
+	con	0				   (see lines 178-181)
+	con	0
+D1	con	0				Indicates door open, activity
+D2	con	0				Indicates prolonged standstill
+D3	con	0				Indicates door open, inactivity
+*** Subroutines and control routine
+insert	stj	9F		Insert NODE(C) to left of NODE(rI1):
+	ld2	3,1(llink2)	rI2 <- LLINK2(rI1).
+	st2	3,6(llink2)	LLINK2(C) <- rI2.
+	st6	3,1(llink2)	LLINK2(rI1) <- C.
+	st6	3,2(rlink2)	RLINK2(rI2) <- C.
+	st1	3,6(rlink2)	RLINK2(C) <- rI1.
+9H	jmp	*		Exit from subroutine.
+delete	stj	9F		Delete NODE(C) from its list:
+	ld1	3,6(llink2)	P <- LLINK2(C).
+	ld2	3,6(rlink2)	Q <- RLINK2(C).
+	st1	3,2(llink2)	LLINK2(Q) <- P.
+	st2	3,1(rlink2)	RLINK2(P) <- Q.
+9H	jmp	*		Exit from subroutine.
+immed	stj	9F		Insert NODE(C) first in WAIT list:
+	lda	time
+	sta	1,6		Set NEXTTIME(C) <- TIME.
+	ent1	wait		P <- LOC(WAIT).
+	jmp	2F		Insert NODE(C) to right of NODE(P).
+hold	add	time		rA <- TIME + rA.
+sortin	stj	9F		Sort NODE(C) into WAIT list.
+	sta	1,6		Set NEXTTIME(C) <- rA.
+	ent1	wait		P <- LOC(WAIT).
+	ld1	0,1(llink1)	P <- LLINK1(P).
+	cmpa	1,1		Compare NEXTTIME fields, right to left.
+	jl	*-2		Repeat until NEXTTIME(C) >= NEXTTIME(P).
+2H	ld2	0,1(rlink1)	Q <- RLINK1(P).
+	st2	0,6(rlink1)	RLINK1(C) <- Q.
+	st1	0,6(llink1)	LLINK1(C) <- P.
+	st6	0,1(rlink1)	RLINK1(P) <- C.
+	st6	0,2(llink1)	LLINK1(Q) <- C.
+9H	jmp	*		Exit from subroutine.
+deletew	stj	9F		Delete NODE(C) from WAIT list:
+	ld1	0,6(llink1)	(This is same as lines 58-63
+	ld2	0,6(rlink1)	   except LLINK1, RLINK1 are used
+	st1	0,2(llink1)	   instead of LLINK2, RLINK2.)
+	st2	0,1(rlink1)
+9H	jmp	*
+cycle1	stj	2,6(nextinst)	Set NEXTINST(C) <- rJ.
+	jmp	cycle
+holdc	stj	2,6(nextinst)	Set NEXTINST(C) <- rJ.
+	jmp	hold		Insert NODE(C) in WAIT, delay (rA).
+cycle	ld6	wait(rlink1)	Set current node C <- RLINK1(LOC(WAIT)).
+	lda	1,6		NEXTTIME(C)
+	sta	time		   becomes new value of simulated TIME.
+	jmp	deletew		Remove NODE(C) from WAIT list.
+	jmp	2,6		Jump to NEXTINST(C).
+*** Coroutine M.		M1. Enter, prepare for successor.
+M1	jmp	values		Computer IN, OUT, INTERTIME, GIVEUPTIME.
+	lda	intertime	INTERTIME is computed by VALUES subroutine.
+	jmp	hold		Put NODE(C) in WAIT, delay INTERTIME.
+	ld6	avail		C <- AVAIL.
+	j6p	1F		If AVAIL != A, jump.
+	ld6	poolmax
+	inc6	4		C <- POOLMAX + 4
+	ld6	poolmax		POOLMAX <- C.
+	jmp	*+3
+1H	lda	0,6(rlink1)
+	sta	avail		AVAIL <- RLINK1(AVAIL).
+	ld1	infloor		rI1 <- INFLOOR (computed by VALUES above).
+	st1	0,6(in)		IN(C) <- rI1.
+	ld2	outfloor	rI2 <- OUTFLOOR (computed by VALUES).
+	st2	3,6(out)	OUT(C) <- rI2.
+	enta	39		Put constant 39 (JMP operation code)
+	sta	2,6		   into third word of node format (6).
+M2	enta	0,4		M2. Signal and wait.  Set rA <- FLOOR.
+	deca	0,1		FLOOR <- IN
+	st6	temp		Save value of C.
+	janz	2F		Jump if FLOOR != IN.
+	ent6	elev1		Set C <- LOC(ELEV1).
+	lda	2,6(nextinst)	Is elevator positioned at E6?
+	deca	E6
+	janz	3F
+	enta	E3		If so, reposition at E3.
+	sta	2,6(nextinst)
+	jmp	deletew		Remove it from WAIT list
+	jmp	4F		   and reinsert it at front of WAIT.
+3H	lda	D3
+	jaz	2F		Jump if D3 = 0.
+	st6	D1		Otherwise set D1 != 0.
+	stz	D3		Set D3 <- 0.
+4H	jmp	immed		Insert ELEV1 at front of WAIT list.
+	jmp	M3		(rI1, rI2 have changed.)
+2H	dec2	0,1		rI2 <- OUT - IN.
+	enta	1
+	j2p	*+3		Jump if going up.
+	sta	call,1(5:5)	Set CALLDOWN(IN) <- 1.
+	jmp	*+2
+	sta	call,1(1:1)	Set CALLUP(IN) <- 1.
+	lda	D2
+	jaz	decision	If D2 = 0, call the DECISION subroutine.
+	lda	elev1+2(nextinst)
+	deca	E1		If the elevator is at E1, call
+	jaz	decision	   the DECISION subroutine.
+M3	ld6	temp		M3. Enter queue.
+	ld1	0,6(in)
+	ent1	queue,1		rI1 <- LOC(QUEUE[IN]).
+	jmp	insert		Insert NODE(C) at right end of QUEUE[IN].
+M4A	lda	giveuptime
+	jmp	holdc		Wait GIVEUPTIME units.
+M4	lda	0,6(in)		M4. Give up.
+	deca	0,4		IN(C) - FLOOR
+	janz	*+3
+	lda	D1		FLOOR = IN(C)
+	janz	M4A		See exercise 7.
+M6	jmp	delete		M6. Get out.  MODE(C) is deleted
+	lda	avail		   from QUEUE or ELEVATOR.
+	sta	0,6(rlink1)	AVAIL <= C.
+	st6	avail
+	jmp	cycle
+M5	jmp	delete		M5. Get in.  NODE(C) is deleted
+	ent1	elevator	   from QUEUE.
+	jmp	insert		Insert it at right of ELEVATOR.
+	enta	1
+	ld2	3,6(out)
+	sta	call,2(3:3)	Set CALLCAR[OUT(C)] <- 1.
+	j5nz	cycle		Jump if STATE != NEUTRAL.
+	dec2	0,4
+	ent5	0,2		Set STATE to proper direction.
+	ent6	elev2		Set C <- LOC(ELEV2).
+	jmp	deletew		Remove E5 action from WAIT list.
+	enta	25
+	jmp	E5A		Restart E5 action 25 units from now.
+*** Coroutine E.
+E1A	jmp	cycle1		Set NEXTINST <- E1, go to CYCLE.
+E1	equ	*		E1. Wait for call.  (no action)
+E2A	jmp	holdc
+E2	j5n	1F		E2. Change of state?
+	lda	call+1,4	State is GOINGUP.
+	add	call+2,4
+	add	call+3,4
+	add	call+4,4
+	jap	E3		Are there calls for higher floors?
+	lda	call-1,4(3:3)	If not, have passenger in the
+	add	call-2,4(3:3)	   elevator called for lower floors?
+	add	call-3,4(3:3)
+	add	call-4,4(3:3)
+	jmp	2F
+1H	lda	call-1,4	State is GOINGDOWN.
+	add	call-2,4
+	add	call-3,4
+	add	call-4,4
+	jap	E3		Are there calls for lower floors? [right???]
+	lda	call+1,4(3:3)	If not, have passenger in the
+	add	call+2,4(3:3)	   elevator called for higher floors?
+	add	call+3,4(3:3)
+	add	call+4,4(3:3)
+2H	enn5	0,5		Reverse direction of STATE.
+	stz	call,4		Set CALL variable to zero.
+	janz	E3		Jump if calls for opposite direction,
+	ent5	0		   otherwise, set STATE <- NEUTRAL.
+E3	ent6	elev3		E3. Open door.
+	lda	0,6		If activity E9 is already scheduled,
+	janz	deletew		   remove it from the WAIT list.
+	enta	300
+	jmp	hold		Schedule activity E9 after 300 units.
+	ent6	elev2
+	enta	76
+	jmp	hold		Schedule activity E5 after 76 units.
+	st6	D2		Set D2 != 0.
+	st6	D1		Set D1 != 0.
+	enta	20
+E4A	ent6	elev1
+	jmp	holdc
+E4	enta	0,4		E4. Let people out, in.
+	sla	4		Set OUT field of rA to FLOOR.
+	ent6	elevator	C <- LOC(ELEVATOR).
+1H	ld6	3,6(llink2)	C <- LLINK2(C).
+	cmp6	=elevator=	Search ELEVATOR list, right to left.
+	je	1F		If C = LOC(ELEVATOR), search is complete.
+	cmpa	3,6(out)	Compare OUT(C) with FLOOR.
+	jne	1B		If not equal, continue search,
+	enta	M6		   otherwise, prepare to send man to M6.
+	jmp	2F
+1H	ld6	queue+3,4(rlink2)  Set C <- RLINK2(LOC(QUEUE[FLOOR])).
+	cmp6	3,6(rlink2)	Is C = RLINK2(C)?
+	je	1F		If so, the queue is empty.
+	jmp	deletew		If not, cancel action M4 for the man.
+	enta	M5		Prepare to send man to M5.
+2H	sta	2,6(nextinst)	Set NEXTINST(C).
+	jmp	immed		Put him at front of WAIT list.
+	enta	25
+	jmp	E4A		Wait 25 units and repeat E4.
+1H	stz	D1		Set D1 <- 0.
+	st6	D3		Set D3 != 0.
+	jmp	cycle		Return to simulate other events.
+E5A	jmp	holdc
+E5	lda	D1		E5. Close door.
+	jaz	*+3		Is D1 = 0?
+	enta	40		If not, people are still getting in or out.
+	jmp	E5A		Wait 40 units, repeat E5.
+	stz	D3		If D1 = 0, set D3 <- 0.
+	enta	20
+	ent6	elev1
+E6A	jmp	holdc		Wait 20 units, then go to E6.
+E6	j5n	*+2		E6. Prepare to move.
+	stz	call,4(1:3)	If STATE != GOINGDOWN, CALLUP and CALLCAR
+	j5p	*+2		   on this floor are reset.
+	stz	call,4(3:5)	If != GOINGUP, reset CALLCAR and CALLDOWN.
+	j5z	decision	Perform DECISION subroutine.
+E6B	j5z	E1A		If STATE = NEUTRAL, go to E1 and wait.
+	lda	D2
+	jaz	*+4
+	ent6	elev3		Otherwise, if D2 != 0,
+	jmp	deletew		   cancel activity E9
+	stz	elev3		   (see line 202).
+	enta	15
+	ent6	elev1		Wait 15 units of time.
+	j5n	E8A		If STATE = GOINGDOWN, go to E8.
+E7A	jmp	holdc
+E7	inc4	1		E7. Go up a floor.
+	enta	51
+	jmp	holdc		Wait 51 units.
+	lda	call,4(1:3)	Is CALLCAR[FLOOR] or CALLUP[FLOOR] != 0?
+	jap	1F
+	ent1	-2,4		If not,
+	j1z	2F		   is FLOOR = 2?
+	lda	call,4(5:5)	If not, is CALLDOWN[FLOOR] != 0?
+	jaz	E7		If not, repeat step E7.
+2H	lda	call+1,4
+	add	call+2,4
+	add	call+3,4
+	add	call+4,4
+	janz	E7		Are there calls for higher floors?
+1H	enta	14		It is time to stop the elevator.
+	jmp	E2A		Wait 14 units and go to E2.
+E8A	jmp	holdc
+* ... (see exercise 8)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+E9	stz	0,6		E9. Set inaction indicator.
+	stz	D2		D2 <- 0.
+	jmp	decision	Perform DECISION subroutine.
+	jmp	cycle		Return to simulation of other events.
+
+* (fill in VALUES, DECISION routines here)
+
+begin	ent4	2		Start with FLOOR = 2
+	ent5	0		   and STATE = NEUTRAL.
+	jmp	cycle		Begin simulation.
+poolmax	end	begin		Storage pool follows literals, temp storage
+
+* Warning: there's probably a typo or two in this file.

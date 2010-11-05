@@ -1,0 +1,63 @@
+* Example program - table of primes
+* (Knuth, vol 1, p 144)
+
+L	equ	500		# of primes to find
+printer	equ	18		Unit # of printer
+prime	equ	-1		Memory area for table of primes
+buf0	equ	2000		Memory area for BUFFER[0]
+buf1	equ	buf0+25		Memory area for BUFFER[1]
+
+	orig	3000
+start	ioc	0(printer)	Skip to new page
+	ld1	=1-L=		P1. Start table.  J <- 1.
+	ld2	=3=		    N <- 3.
+2H	inc1	1		P2. N is prime.  J <- J + 1.
+	st2	prime+L,1	    PRIME[J] <- N.
+	j1z	2F		P3. 500 found?
+4H	inc2	2		P4. Advance N.
+	ent3	2		P5. K <- 2.
+6H	enta	0		P6. Does PRIME[K] divide N?
+	entx	0,2
+	div	prime,3
+	jxz	4B		    R = 0?
+	cmpa	prime,3		P7. PRIME[K] large?
+	inc3	1		P8. Advance K.
+	jg	6B		    Jump if Q > PRIME[K].
+	jmp	2B		    Otherwise N is prime.
+
+2H	out	title(printer)	P9. Print title.
+	ent4	buf1+10		    B <- 1.
+	ent5	-50		    M <- 0.
+
+2H	inc5	L+1		Advance M.
+4H	lda	prime,5		P10. Set up line. (Right to left)
+	char
+	stx	0,4(1:4)
+	dec4	1
+	dec5	50		(rI5 goes down by 50 until nonpositive)
+	j5p	4B
+	out	0,4(printer)	P11. Print line.
+	ld4	24,4		    Switch buffers.
+	j5n	2B		    If rI5 = 0, we're done.
+	hlt
+
+* Initial contents of tables and buffers:
+
+	orig	prime+1
+	con	2		First prime is 2.
+	
+	orig	buf0-5
+title	con	"first"
+	con	" five"
+	con	" hund"
+	con	"red p"
+	con	"rimes"
+	
+	orig	buf0+24
+	con	buf1+10		Each buffer points to the other.
+	orig	buf1+24
+	con	buf0+10
+	
+	end	start
+
+* End of prime.mix

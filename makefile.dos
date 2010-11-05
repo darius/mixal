@@ -1,0 +1,30 @@
+# Make file for Borland C++
+
+.c.obj:
+	bcc -c -v {$< }
+
+OBJS = asm.obj cell.obj charset.obj driver.obj io.obj main.obj parse.obj run.obj symbol.obj
+
+mix.exe: $(OBJS)
+	bcc -v -emix $(OBJS)
+
+clean:
+	del *.obj
+	del *.exe
+
+mix.h: cell.h
+	touch mix.h
+
+ops.inc: opcodes
+	sort <opcodes >mnemonic
+	mawk -f op2c.awk mnemonic >ops.inc
+
+asm.obj: asm.c mix.h asm.h run.h
+cell.obj: cell.c mix.h
+symbol.obj: symbol.c mix.h asm.h symbol.h
+charset.obj: charset.c mix.h charset.h
+driver.obj: driver.c mix.h asm.h driver.h parse.h symbol.h ops.inc
+main.obj: main.c mix.h asm.h driver.h parse.h run.h symbol.h
+parse.obj: parse.c mix.h asm.h charset.h parse.h symbol.h
+run.obj: run.c mix.h asm.h charset.h io.h run.h
+io.obj: io.c mix.h charset.h io.h run.h

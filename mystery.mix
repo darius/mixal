@@ -1,0 +1,28 @@
+* Mystery program
+* (Knuth, vol 1, p 153)
+
+printer	equ	18
+buf	orig	*+3000
+1H	ent1	1
+	ent2	0
+	ldx	4F
+2H	ent3	0,1
+3H	stz	buf,2
+	inc2	1
+	dec3	1
+	j3p	3B
+	stx	buf,2
+	inc2	1
+	inc1	1
+	cmp1	=75=
+	jl	2B
+	enn2	2400
+	out	buf+2400,2(printer)
+	inc2	24
+	j2n	*-2
+	hlt
+
+4H	con	"aaaaa"
+	end	1B
+
+* End of mystery.mix

@@ -1,0 +1,526 @@
+This has been lifted verbatim from Knuth volume 1.  (See README for the
+reference.)  Some examples and witty but nonessential sections that I didn't 
+feel like typing have been omitted.  
+
+Copyright (C) 1973, 1968 by Addison-Wesley; used without permission. 
+
+
+1.3.1 Description of MIX.
+
+...
+
+    MIX has a peculiar property in that it is both binary and decimal at the
+same time.  The programmer doesn't actually know whether he is programming a
+machine with base 2 or base 10 arithmetic. ...
+
+Words.  The basic unit of information is a -byte-.  Each byte contains an
+-unspecified- amount of information, but it must be capable of holding at
+least 64 distinct values.  That is, we know that any number between 0 and
+63, inclusive, can be contained in one byte.  Furthermore, each byte
+contains -at-most- 100 distinct values.  On a binary computer a byte must
+therefore be composed of six bits; on a decimal computer we have two digits
+per byte.
+    ... An algorithm in MIX should work properly regardless of how big a 
+byte is.  Although it is quite possible to write programs which depend on
+the byte size, this is an illegal act which will not be tolerated; the only
+legitimate programs are those which would give correct results with all 
+byte sizes. ...
+    A computer word is five bytes plus a sign.  The sign position has only
+two possible values, + and -.
+
+Registers.  There are nine registers in MIX.
+
+    The A-register (Accumulator) is five bytes plus sign.
+    The X-register (Extension) is also five bytes plus sign.
+    The I-registers (Index registers) I1, I2, I3, I4, I5, and I6 each hold
+two bytes plus sign.
+    The J-register (Jump address) holds two bytes, and its sign is always +.
+
+We shall use a small letter ``r'' prefixed to the name, to identify a MIX
+register.  Thus, ``rA'' means ``register A''.
+    The A-register has many uses, especially for arithmetic and operating on
+data.  The X-register is an etension on the ``right-hand side'' of rA, and it
+is used in connection with rA to hold ten bytes of a product or dividend, or
+it can be used to hold information shifted to the right out of rA.  The index
+registers rI1, rI2, rI3, rI4, rI5, and rI6 are used primarily for counting and
+for referencing variable memory addresses.  The J-register always hold the
+address of the instruction following the preceding ``JUMP'' intruction, and it
+is primarily used in connection with subroutines.
+    Besides thesee registers, MIX contains
+    
+      an overflow toggle (a single bit which is either ``on'' or ``off''),
+      a comparison indicator (which has three values: less, equal, or greater),
+      memory (4000 words of storage, each word with five bytes plus sign),
+      and input-output devices (cards, tapes, etc.).
+
+Partial fields of words.  The five bytes and sign of a computer word are
+numbered as follows:
+
+	0       1       2       3       4       5
+	+/-     Byte    Byte    Byte    Byte    Byte.
+
+Most of the instructions allow the programmer to use only part of a word if he
+chooses.  In this case a ``field specification'' is given.  The allowable
+fields are those which are adjacent in a computer word, and they are 
+represented by (L:R), where L is the number of the left-hand part and R is the
+number of the right-hand part of the field.  Examples of field specifications
+are:
+	(0:0), the sign only.
+	(0:2), the sign and first two bytes.
+	(0:5), the whole word.  This is the most common field specification.
+	(1:5), the whole word except the sign.
+	(4:4), the fourth byte only.
+	(4:5), the two least significant bytes.
+
+The use of these field specifications varies slightly from instruction to
+instruction, and it will be explained in detail for each instruction where
+it applies.
+    Although it is generally not important to the programmer, the field (L:R)
+is denoted in the machine by the single number 8L + R, and this number will 
+fit in one byte.
+
+Instruction format.  Computer words used for instructions have the following
+form:
+
+	0   1   2   3   4   5                                       (3)
+	+/- A   A   I   F   C.
+
+    The rightmost byte, C, is the operation code telling what operation is to
+be performed.  For example, C=8 is the operation LDA, ``load the A register''.
+    The F-byte holds a modification of the operation code.  F is usually a
+field specification (L:R)=8L + R; for example, if C=8 and F=11, the operation
+is ``load the A-register with the (1:3) field''.  Sometimes F is used for other
+purposes; on input-output instructions, for example, F is the number of the 
+affected input or output unit.
+    The left-hand portion of the instruction, +/-AA, is the ``address''.  (Note
+that the sign is part of the address.)  The I-field, which comes next to the
+address, is the ``index specification'', which may be used to modify the 
+address of an instruction.  If I=0, the address +/-AA is used without change;
+otherwise I should contain a number {i} between 1 and 6, and the contents of
+index register I{i} are added algebraically to +/-AA; the result is used as
+the address of the instruction.  this indexing process takes place on -every-
+instruction.  We will use the letter M to indicate the address after any
+specified indexing has occurred.  (If the addition of the index register to the
+address +/-AA yields a result which does not fit in two bytes, the value of M
+is undefined.)
+    In most instructions, M will refer to a memory cell.  The terms ``memory
+cell'' and ``memory location'' are used almost interchangeably in this book.
+We assume that there are 4000 memory cells, numbered fro 0 to 3999; hence every
+memory location can be addressed with two bytes.  For every instruction in 
+which M is to refer to a memory cell we must have 0 <= M <= 3999, and in this
+case we will write CONTENTS(M) to denote the value stored in memory location M.
+    On certain instructions, the ``address'' M has another significance, and it
+may even be negative.  Thus, one instruction adds M to an index register, and
+this operation takes account of the sign of M.
+
+Notation.  To discuss instructions in a readable manner, we will use the 
+notation
+
+			OP  ADDRESS,I(F)                            (4)
+
+to denote an instruction like (3).  Here OP is a symbolic name which is given
+to the operation code (the C-part) of the instruction; ADDRESS is the +/-AA
+portion; and I, F represent the I- and F-fields, respectively.
+    If I is zero, the ``,I'' is omitted.  If F is the -normal- F-specification
+for this particular operator, the ``(F)'' need not be written.  The normal F-
+specification for almost all operators is (0:5), representing a whole word.
+If a different F is standard, it will be mentioned explicity when we discuss
+a particular operator.
+
+...
+
+Rules for each instruction.  The  remarks following (3) above have defined the
+quantities M, F, and C for every word used as an instruction.  We will now
+define the actions corresponding to each instruction.  [Knuth gives C- and F-
+values in each instruction's entry; I'm omitting them since you can get them
+from the  opcodes  file in this distribution.]
+
+Loading operators
+
+* LDA (load A).  
+The specified field of CONTENTS(M) replaces the previous contents of register 
+A.
+    On all operations where a partial field is used as an input, the sign is
+used if it is a part of the field, otherwise the sign + is understood.  The
+field is shifted over to the right-hand part of the register as it is loaded.
+    Examples: If F is the normal field specification (0:5), the entire contents
+of location M is loaded.  If F is (1:5), the absolute value of CONTENTS(M) is
+loaded with a plus sign.  If M contains an -instruction- word and if F is 
+(0:2), the ``+/-AA'' field is loaded as 
+
+	0   1   2   3   4   5
+	+/- 0   0   0   A   A.
+
+...
+
+* LDX (load X).  
+This is the same as LDA, except that rX is loaded instead of rA.
+
+* LD{i} (load {i}).
+This is the same as LDA, except that rI{i} is loaded instead of rA.  An index
+register contains only two bytes (not five) plus sign; bytes 1, 2, 3 are always
+assumed to be zero.  The LD{i} instruction is considered undefined if it would
+result in setting bytes 1, 2, 3 to anything but zero.
+    In the description of all instructions, ``{i}'' stands for an integer, 
+1 <= i <= 6.  Thus, LD{i} stands for six different instructions:
+LD1, LD2, ..., LD6.
+
+* LDAN (load A negative).
+* LDXN (load X negative).
+* LD{i}N (load {i} negative).
+These eight instructions are the same as LDA, LDX, LD{i}, respectively, except
+that the -opposite- sign is loaded.
+
+Storing operators.
+
+* STA (store A).
+The contents of rA replaces the field of CONTENTS(M) specified by F.  The other
+parts of CONTENTS(M) are unchanged.
+    On a -store- operation the field F has the opposite significance from the
+-load- operation.  The number of bytes in the field is taken from the right-
+hand side of the the register and shifted -left- if necessary to be inserted in
+the proper field of CONTENTS(M).  The sign is not altered unless it is part of
+the field.  The contents of the register is not affected.
+
+...
+
+* STX (store X).
+Same as STA except rX is stored rather than rA.
+
+* ST{i} (store {i}).
+Same as STA except rI{i} is stored rather than rA.  Bytes 1, 2, 3 of an index
+register are zero; thus if rI1 contains
+
+	+/- m   n
+
+this behaves as though it were
+
+	0   1   2   3   4   5
+	+/- 0   0   0   m   n.
+
+* STJ (store J).
+Same as ST{i} except rJ is stored, and its sign is always +.
+    On STJ the normal field specification for F is (0:2), -not- (0:5).  This is
+natural, since STJ is almost always done into the address field of an 
+instruction.
+
+* STZ (store zero).
+Same as STA except plus zero is stored.  In other words, the specified field of
+CONTENTS(M) is cleared to zero.
+
+Arithmetic operators.  On the add, subtract, multiply, and divide operations a
+field specification is allowed.  A field specification of ``(0:6)'' can be used
+to indicate a ``floating-point'' operation (see Section 4.2 [in Volume 2]), but
+few of the programs we will write for MIX will use this feature...
+    The standard field specification is, as usual, (0:5).  Other fields are
+treated as in LDA.  We will use the letter V to indicate the specified field of
+CONTENTS(M); thus, V is the value which would have been loaded into register A
+if the operation code were LDA.
+
+* ADD.
+V is added to rA.  If the magnitude of the result is too large for register A,
+the overflow toggle is set on, and the remainder of the addition appearing in
+rA is as though a ``1''  had been carried into another register to the left of
+A.  (Otherwise the setting of the overflow toggle is unchanged.)  If the result
+is zero, the sign of rA is unchanged.
+
+    Example:  The sequence of instructions below gives the sum of the five
+bytes of register A.
+
+			    STA     2000
+			    LDA     2000(5:5)
+			    ADD     2000(4:4)
+			    ADD     2000(3:3)
+			    ADD     2000(2:2)
+			    ADD     2000(1:1)
+
+This is sometimes called ``sideways addition''.
+
+* SUB (subtract).
+V is subtracted from rA.  Overflow may occur as in ADD.
+    Note that because of the variable definition of byte size, overflow will 
+occur in some MIX computers when it would not occur in others...
+
+* MUL (multiply).
+The 10-byte product of V times (rA) replaces registers A and X.  The signs of 
+rA and rX are both set to the algebraic sign of the result (i.e., + if the
+signs of V and rA were the same, and - if they were different).
+
+* DIV (divide).
+The value of rA and rX, treated as a 10-byte number, with the sign of rA, is
+divided by the value V.  If V=0 or if the quotient is more than five bytes in
+magnitude (this is equivalent to the condition that |rA| >= |V|), registers A
+and X are filled with undefined information and the overflow toggle is set on.
+Otherwise the quotient is placed in rA and the remainder is placed in rX.  The
+sign of rA afterward is the algebraic sign of the quotient; the sign of rX 
+afterward is the previous sign of rA.
+
+...
+
+Address transfer operators.  In the following operations, the (possibly
+indexed) ``address'' M is used as a signed number, not as the address of a
+cell in memory.
+
+* ENTA (enter A).
+The quantity M is loaded into rA.  The action is equivalent to ``LDA'' from a
+memory word containing the signed value of M.  If M=0, the sign of the 
+instruction is loaded.  [I don't think the simulator works that way. Better
+check...]
+
+    Examples: ``ENTA 0'' sets rA to zeros.  ``ENTA 0,1'' sets rA to the current
+contents of index register 1, except that -0 is changed to +0.
+
+* ENTX (enter X).
+* ENT{i} (enter {i}).
+Analogous to ENTA, loading the appropriate register.
+
+* ENNA (enter negative A).
+* ENNX (enter negative X).
+* ENN{i} (enter negative {i}).
+Same as ENTA, ENTX, and ENT{i}, except that the opposite sign is loaded.
+
+    Example: ``ENN3 0,3'' replaces rI3 by its negative.
+
+* INCA (increase A).
+The quantity M is added to rA; the action is equivalent to ``ADD'' from a 
+memory word containing the value of M.  Overflow is possible and it is treated
+just as in ADD.
+
+    Example: ``INCA 1'' increases the value of rA by one.
+
+* INCX (increase X).
+The quantity M is added to rX.  If overflow occurs, the action is equivalent to
+ADD, except that rX is used instead of rA.  Register A is never affected by 
+this instruction.
+
+* INC{i} (increase {i}).
+Add M to rI{i}.  Overflow must not occur; if the magnitude of the result is
+more than two bytes, the result of this instruction is undefined.
+
+* DECA (decrease A).
+* DECX (decrease X).
+* DEC{i} (decrease {i}).
+These eight instructions are the same as INCA, INCX, and INC{i}, respectively,
+except that M is subtracted from the register rather than added.
+    Note that the operation code C is the same for ENTA, ENNA, INCA, AND DECA;
+the F-field is used to distinguish the various operations in this case.
+
+Comparison operators.  The comparison operators all compare the value contained
+in a register with a value contained in memory.  The comparison indicator is
+then set to LESS, EQUAL, or GREATER according to whether the value of the
+-register- is less than, equal to, or greater than the value of the -memory-
+-cell-.  A minus zero is -equal-to- a plus zero.
+
+* CMPA (compare A).
+The specified field of A is compared with the -same- field of CONTENTS(M).  If
+the field F does not include the sign position, the fields are both thought of
+as positive; otherwise the sign is taken into account in the comparison.  (If
+F is (0:0) an equal comparison always occurs, since minus zero equals plus
+zero.)
+
+* CMPX (compare X).
+This is analogous to CMPA.
+
+* CMP{i} (compare {i}).
+Analogous to CMPA.  Bytes 1, 2, and 3 of the index register are treated as
+zero in the comparison.  (Thus if F = (1:2), the result cannot be GREATER.)
+
+Jump operators.  Ordinarily, instructions are executed in sequential oder; 
+i.e., the instruction executed after the one in location P is the instruction
+found in location P+1.  Several ``jump'' instructions allow this sequence to
+be interrupted.  When such a jump takes place, the J-register is normally set
+to the address of the next instruction (that is, the address of the instruction
+which would have been next if we hadn't jumped).  A ``store J'' instruction
+then can be used by the programmer, if desired, to set the address field of 
+another command which will later be used to return to the original place in the
+program.  The J-register is changed whenever a jump actually occurs in a 
+program (except JSJ), and it is never changed except when a jump occurs.
+
+
+* JMP (jump).
+Unconditional jump: the next instruction is taken from location M.
+
+* JSJ (jump, save J).
+Same as JMP except that the contents of rJ are unchanged.
+
+* JOV (jump on overflow).
+If the overflow toggle is on, it is turned off and a JMP occurs; otherwise
+nothing happens.
+
+* JNOV (jump on no overflow).
+If the overflow toggle is off, a JMP occurs; otherwise it is turned off.
+
+* JL, JE, JG, JGE, JNE, JLE (jump on less, equal, greater, greater-or-equal,
+unequal, less-or-equal).
+Jump if the comparison indicator is set to the condition indicated.  For
+example, JNE will jump if the comparison indicator is LESS or GREATER.  The
+comparison indicator is not changed by these instructions.
+
+* JAN, JAZ, JAP, JANN, JANZ, JANP (jump A negative, zero, positive, 
+nonnegative, nonzero, nonpositive).
+If the contents of rA satisfy the stated condition, a JMP occurs, otherwise
+nothing happens.  ``Positive'' means -greater- than zero (not zero); 
+``nonpositive'' means the opposite, i.e., zero or negative.
+
+* JXN, JXZ, JXP, JXNN, JXNZ, JXNP (jump X negative, zero, positive, 
+nonnegative, nonzero, nonpositive).
+* J{i}N, J{i}Z, J{i}P, J{i}NN, J{i}NZ, J{i}NP (jump {i} negative, zero, positive, 
+nonnegative, nonzero, nonpositive).
+These are analogous to the corresponding operations for rA.
+
+Miscellaneous operators.
+
+* MOVE.
+The number of words specified by F is moved, starting from location M to the
+location specified by the contents of index register 1.  The transfer occurs
+one word at a time, and rI1 is increased by the value of F at the end of the
+operation.  If F=0, nothing happens.
+    Care must be taken when the groups of locations involved overlap...
+
+* SLA, SRA, SLAX, SRAX, SLC, SRC (shift left A, shift right A, shift left AX,
+shift right AX, shift left AX circularly, shift right AX circularly).
+    These are the ``shift'' commands.  Signs of registers A, X are not affected
+in any way.  M specifies the number of -bytes- to be shifted left or right; M
+must be nonnegative.  SLA and SRA do not affect rX; the other shifts affect
+both registers as though they were a single 10-byte register.  With SLA, SRA,
+SLAX, and SRAX, zeros are shifted into the register at one side, and bytes
+disappear at the other side.  The instructions SLC and SRC call for a 
+``circulating'' shift, in which the bytes that leave one end enter in at the
+other end.  Both rA and rX participate in a circulating shift.
+
+    Examples:
+			      Register A                       Register X
+    Initial contents    +   1   2   3   4   5           -   6   7   8   9   10
+    SRAX    1           +   0   1   2   3   4           -   5   6   7   8   9
+    SLA     2           +   2   3   4   0   0           -   5   6   7   8   9
+    SRC     4           +   6   7   8   9   2           -   3   4   0   0   5
+    SRA     2           +   0   0   6   7   8           -   3   4   0   0   5
+    SLC     501         +   0   6   7   8   3           -   4   0   0   5   0
+
+* NOP (no operation).
+No operation occurs, and this instruction is bypassed.  F and M are ignored.
+
+* HLT (halt).
+The machine stops.  When the computer operator restarts it, the net effect is
+equivalent to NOP.
+
+Input-output operators.  MIX has a fair amount of input-output equipment (all
+of which is optional at extra cost).  Each device is given a number as follows:
+
+    Unit number             Peripheral device               Block size
+	t           Tape unit no. t (0 <= t <= 7)           100 words
+	d           Disk or drum unit no. d (8 <= d <= 15)  100 words
+	16          Card reader                              16 words
+	17          Card punch                               16 words
+	18          Printer                                  24 words
+	19          Typewriter and paper tape                14 words
+
+Not every MIX installation will have all of this equipment available; we will
+occasionally make appropriate assumptions about the presence of certain 
+devices.  Some devices may not be used both for input and for output.  The
+number of words mentioned in the above tble is a fixed block size associated
+with each unit.
+    Input or output with magnetic tape, disk, or drum units reads or writes 
+full words (five bytes plus sign).  Input or output with units 16 through 19,
+however, is always done in a -character-code- where each byte represents one
+alphnumeric character.  Thus, five characters per MIX word are transmitted. 
+The character code is given [in charset.c]...  It is not possible to read in
+or write out all possible values a byte may have, since certain combinations
+are undefined.  Not all input-output devices are capable of handling all the
+symbols in the character set; for example, the symbols phi and pi which appear
+amid the letters will perhaps not be acceptable to the card reader.  When input
+of character code is being done, the signs of all words are set to ``+''; on
+output, signs are ignored.
+    The disk and drum units are large external memory devices each containing
+b^2 100-word blocks, where b is the byte size.  On every IN, OUT, or IOC
+instruction as defined below, the particular 100-word block referred to by the
+instruction is specified by the current contents of the two least significant
+bytes of rX. 
+
+* IN (input).  C=36; F=unit.
+This instruction initiates the transfer of information from the input unit
+specified into consecutive locations starting with M.  The number of locations
+transferred is the block size for this unit (see the table above).  The machine
+will wait at this point if a preceding operation for the same unit is not yet
+complete.  The transfer of information which starts with this instruction will
+not be complete until somewhat later, depending on the speed of the input 
+device, so a program must not refer to the information in memory until then.
+It is improper to attempt to read any record from magnetic tape which follows
+the latest record written on that tape.
+
+* OUT (output).  C=37; F=unit.
+This instruction starts the transfer of information from memory locations
+starting at M to the output unit specified.  (The machine waits until the unit
+is ready, if it is not initially ready.)  The transfer will not be complete 
+until somewhat later, depending on the speed of the output device, so a program
+must not alter the information in memory until then.
+
+* IOC (input-output control).  C=35; F=unit.
+The machine waits, if necessary, until the specified unit is not busy.  Then a
+control operation is performed, depending on the particular device being used.
+The following examples are used in various parts of this book:
+    Magnetic tape: If M=0, the tape is rewound.  If M<0 the tape is skipped 
+backward -M records, or to the beginning of the tape, whichever comes first.
+If M>0, the tape is skipped forward; it is improper to skip forward over any
+records following the one last written on that tape.
+    For example, the sequence ``OUT 100(3); IOC -1(3); IN 2000(3)'' writes out
+one hundred words onto tape 3, then reads it back in again.  Unless the tape
+reliability is questioned, the last two instructions of that sequence are only
+a slow way to move words 1000-1099 to locations 2000-2099.  The sequence 
+``OUT 1000(3); IOC +1(3)'' is improper.
+    Disk or drum: M should be zero.  The effect is to position the device
+according to rX so that the next IN or OUT operation on this unit will take 
+less time if it uses the same rX setting.
+    Printer: M should be zero.  ``IOC 0(18)'' skips the printer to the top of
+the following page.
+    Paper tape reader: Rewind the tape.  (M should be zero).
+
+* JRED (jump ready).  C=38; F=unit.
+A jump occurs if the specified unit is ready, i.e., finished with the preceding
+operation initiated by IN, OUT, or IOC.
+
+* JBUS (jump busy).  C=34; F=unit.
+Same as JRED except the jump occurs under the opposite circumstances, i.e., 
+when the specified unit is -not- ready.
+    Example: In location 1000, the instruction ``JBUS 1000(16)'' will be 
+executed repeatedly until unit 16 is ready.
+
+    The simple operations above complete MIX's repertoire of input-output
+instructions.  There is no ``tape check'' indicator, etc...
+
+Conversion Operators.
+
+* NUM (convert to numeric).
+This operation is used to change the character code into numeric code.  M is 
+ignored.  Registers A, X are assumed to contain a 10-byte number in character
+code; the NUM instruction sets the magnitude of rA equal to the numerical value
+of this number (treated as a decimal number).  The value of rX and the sign of
+rA are unchanged.  Bytes 00, 10, 20, 30, 40, ... convert to the digit zero;
+bytes 01, 11, 21, ... convert to the digit one; etc.  Overflow is possible, and
+in this case the remainder modulo the word size is retained.
+
+* CHAR (convert to characters).
+This operation is used to change numeric code into character code suitable for
+output to cards or printer.  The value in rA is converted into a 10-byte
+decimal number which is put into register A and X in character code.  The signs
+of rA, rX are unchanged.  M is ignored.
+
+...
+
+Timing.  To give quantitative information as to how ``good'' MIX programs are,
+each of MIX's operations is assigned an execution time typical for present-day
+computers.
+    ADD, SUB, all LOAD operations, all STORE operations (including STZ), all
+shift commands, and all comparison operations take two units of time.  MOVE
+requires one unit plus two for each word moved.  MUL requires 10 and DIV 
+requires 12 units.  Execution time for floating-point operations is 
+unspecified.  All remaining operations take one unit of time, plus the time
+the computer may be idle on the IN, OUT, IOC, or HLT instructions.
+    Note in particular that ENTA takes on unit of time, while LDA takes two
+units.  The timing rules are easily remembered because of the fact that, except
+for shifts, MUL, and DIV, the number of units equals the number of references 
+to memory (including the reference to the instruction itself).
+    The ``unit'' of time is a relative measure which we will denote simply by
+u.  It may be regarded as, say, 10 microseconds (for a relatively inexpensive
+computer) or as 1 microsecond (for a relatively high-priced machine).
+    Example: the sequence LDA 1000; INCA 1; STA 1000 takes exactly 5u.

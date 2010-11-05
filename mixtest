@@ -1,0 +1,9 @@
+: 'UNIX script to check MIX program correctness'
+echo "Regression test on prime.mix:"
+./mixal <prime.mix >foo
+diff -c prime.out foo
+echo "Regression test on mystery.mix:"
+./mixal <mystery.mix >foo
+diff -c mystery.out foo
+rm -f foo
+

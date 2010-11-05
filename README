@@ -1,0 +1,80 @@
+		README FILE FOR THE MIXAL DISTRIBUTION
+
+This is an assembler and interpreter for Donald Knuth's mythical MIX computer,
+defined in:
+
+Donald Knuth, _The Art of Computer Programming, Vol. 1: Fundamental 
+  Algorithms_.  Addison-Wesley, 1973 (2nd ed.)
+
+This is *not* the GNU MIX Development Kit.  You can find that at:
+
+	http://gnu.essentkabel.com/software/mdk/mdk.html
+
+This implementation was designed and written by Darius Bacon
+<djello@well.sf.ca.us>, then ported to UNIX and debugged by Eric S. Raymond
+<esr@snark.thyrsus.com>.  Corrections to multiplication and division by
+Larry Gately <lgately@rohan.btg.com>; see Notes.
+
+		AUTHOR'S IMPLEMENTATION NOTES
+
+There is one significant difference in the assembler format: Knuth puts
+fields at fixed offsets on a line, while I separate them by whitespace.
+(Purists may wish to fix this obvious bug.)
+
+The tape devices are currently unimplemented.  (Use the 'card punch'
+and 'printer' devices if you don't need mass storage.  They're
+automatically connected to standard input and output.
+
+Floating-point instructions aren't implemented either.  They weren't
+covered in Volume I, which is all I've got so far.
+
+This MIX is a binary machine.  I think that was a mistake -- decimal
+would make debugging enough nicer to compensate for the decreased
+efficiency.  When dumping internal values, it prints them in octal, so
+you can get the field values by inspection.
+
+Things to do are marked by a comment starting with **. 
+The program still needs more testing.
+
+			PORTING AND TESTING
+
+The code is written in pure ANSI C.  It is known to work in the
+following environments:
+
+	OS		Compiler
+	-----------	------------
+	BSD/386		gcc
+	AIX-3.2.5	gcc
+	DOS		Watcom C
+	DOS		Borland C
+
+You can regression-test the interpreter with mixtest (under UNIX) or
+test.bat (under DOS).
+
+			FILES
+
+asm.[ch]	A Silly Module
+cell.[ch]	Operations on MIX words (Cells)
+charset.[ch]	The character set
+driver.[ch]	Assemble a single source line
+elevator.mix	Sample code from Knuth vol. 1
+io.[ch] 	Simulate MIX I/O devices
+main.c		Main program
+Makefile	Makefile for Unix
+makefile.dos	Makefile for Borland C++ under MS-DOS
+MIX.DOC  	Excerpt from The Art Of Computer Programming describing MIX.
+mix.h		Header for things needed all over the program
+mixtest 	Regression-testing shell script
+mystery.mix	Sample program
+mystery.out	Its output
+NOTES		Notes on the MIX assembly language
+op2c.awk	Converts the table of instructions into a C array
+opcodes 	The table of instructions
+ops.inc		The same, as a C array, for the awkless
+parse.[ch]	Parse an operand field
+prime.mix	Sample program, with notes on MIX assembly language
+prime.out	Its output
+README  	General info
+run.[ch]	Simulate the MIX machine
+symbol.[ch]	The symbol table
+test.bat	Regression-testing DOS batch file

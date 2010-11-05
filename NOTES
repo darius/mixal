@@ -1,0 +1,153 @@
+		Notes on MIXAL, the MIX assembly language
+
+It should be pretty obvious if you've coded in assembler before and if you've
+read the instruction-set description.  A few things that may not be obvious:
+
+Spaces aren't allowed in the operand field.  (That's why you can put
+comments after the operand field, without any special comment character.)
+
+Forward references are not allowed in expressions.
+
+An expression is evaluated strictly left-to-right, with no operator
+precedence.
+
+In line 12 of prime.mix:
+
+	ld1	=1-L=
+
+the =1-L= denotes a memory location automatically placed by the assembler
+after your code, containing the value 1-L.  Syntactically, =1-L= is like a
+forward reference.  (Note that 
+
+	ent1	1-L
+
+is equivalent but more efficient.)
+
+The character  *  in the operand field denotes the current address of 
+assembly.  Thus,
+
+	jmp	*
+
+is a one-instruction infinite loop.
+
+The funny two-letter labels starting with a digit are local labels:
+In an instruction like
+
+	jmp	2F
+
+the 2F refers to the next occurrence of 2H as a label; in
+
+	jmp	2B
+
+the 2B refers to the last occurrence of 2H as a label.
+
+There's more, but that should be enough to get by with until you procure
+a copy of Knuth.  I'm awfully sick of typing.  Sorry.
+
+Larry Gately's notes begin here:
+
+The version of cell.c in MIXAL 1.06 had problems with both the
+multiply and divide functions.
+
+  ----------------------
+
+	Divide function
+
+  The divide function has the simpler error.  The lines
+
+	    r <<= 1;
+	    if (q & (1L << 30))
+		++r;
+	    q = (q << 1) & ((1L << 30) - 1);
+
+  view r and q as a sixty bit register (r is the upper thirty,
+  a is the lower thirty).  They do a shift left one bit on the
+  register.  The line
+
+	    if (q & (1L << 30))
+
+  should test the upper bit of q (to shift it into r), but it is
+  actually testing the sign bit of q.  The line should read
+
+	    if (q & (1L << 29))
+
+  As a test, the following MIX program calculates (2 ^ 30 + 5) / 10.
+  (1073741829).  
+
+A	CON	1
+B	CON	5
+C	CON	10
+START	LDA	A
+	LDX	B
+	DIV	C
+	HLT
+	END	START
+
+  The new version of MIXAL gets the correct answer of 107374182r9.  
+  The old version of MIXAL gets a wrong answer of     107374182r4.  
+
+  An example of a division where both the product and the remainder
+  are wrong is (2 ^ 30 + 2 ^ 29) / 3.  See the folowing program.
+
+A	CON	1
+B	CON	536870912     2 ^ 29
+C	CON	3
+START	LDA	A
+	LDX	B
+	DIV	C
+	HLT
+	END	START
+
+  The new version of MIXAL gets the correct answer of 536870912r0.  
+  The old version of MIXAL gets a wrong answer of     357913941r1.  
+
+  ----------------------
+
+	Multiply function
+
+  The multiply function breaks both factors into 2 pieces, one of
+  which is 16 bits and the other 14 bits.  It then does multiplies
+  the parts.  To calculate the lower 30 bits of the product, it uses
+  this line:
+
+    unsigned long low_sum = x0 * y0 + (low16(partials) << 16);
+
+  There are two things wrong with this.  Firstly, the addition can
+  overflow.  For example, this happens when both factors are (2 ^ 17 - 1).
+  Secondly, even when it doesn't overflow, there can be significant
+  bits in two upper bits of low_sum, which need to be carried over
+  into high_sum.  For example, this happens when both factors are
+  (2 ^ 30 - 1 ).  The following line accounts one, but not both.
+
+	unsigned long high_sum = 
+	  x1 * y1 + (partials >> 16) + (low_magnitude != low_sum);
+
+  I have replaced the multiply algorithm with one that breaks both
+  factors into three pieces, each 10 bits.  This requires calculating
+  more terms, of course.  There is a commentary in the code, showing
+  why the new version should not overflow.
+
+
+  The program below calculates (2 ^ 30 - 1) ^ 2.
+
+A	CON	1073741823	2 ^ 30 - 1
+START	LDA	A
+	MUL	A
+	HLT
+	END	START
+
+  The new version of MIXAL gets the correct answer of 17777777760000000001 (Base 8).
+  The old version of MIXAL gets a wrong answer of     17777777770000000001 (Base 8).
+
+
+  The program below calculates (2 ^ 17 - 1) ^ 2.
+
+A	CON	131071		2 ^ 17 - 1
+START	LDA	A
+	MUL	A
+	HLT
+	END	START
+
+  The new version of MIXAL gets the correct answer of 177777000001 (Base 8).
+  The old version of MIXAL gets a wrong answer of      37777000001 (Base 8).  
+

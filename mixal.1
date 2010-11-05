@@ -1,0 +1,117 @@
+'\" t
+.\"     Title: MIXAL
+.\"    Author: [see the "AUTHOR" section]
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 10/20/2010
+.\"    Manual: Mixal user\*(Aqs manual
+.\"    Source: Retrocomputing Museum
+.\"  Language: English
+.\"
+.TH "MIXAL" "1" "10/20/2010" "Retrocomputing Museum" "Mixal user\*(Aqs manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+mixal \- a load\-and\-go MIX assembler
+.SH "SYNOPSIS"
+.HP \w'\fBmixal\fR\ 'u
+\fBmixal\fR [\fIfile\fR...]
+.SH "DESCRIPTION"
+.PP
+mixal
+is an implementation of the hypothetical
+MIX
+computer and its assembly language called
+MIXAL\&. The computer was designed by Donald Knuth for use in his monumental and yet to be finished book series
+The Art of Computer Programming\&. All programs and all programming exercises in the book are written in the
+MIXAL
+language\&.
+.PP
+This implementation is a load\-and\-go assembler, meaning that you provide it with a
+MIXAL
+program source, which it translates into
+MIX
+machine code, which it promptly executes by acting as a
+MIX
+emulator\&.
+.PP
+You give
+mixal
+zero or more
+MIXAL
+program source files in the command line, which the program interprets\&. If you give it no arguments, it expects to find a program in the standard input stream\&. After the program has executed, the final state of the machine registers is printed to the standard output stream\&.
+.PP
+The card punch and line printer devices are connected to the standard input and output stream, respectively\&. Console input and output are connected to standard input and output, and the disk devices are connected to files named diskN in the current directory, where N is the device number\&. Those files are created on demand\&.
+.PP
+There is one significant difference between the MIXAL input language and MIX as originally described by Knuth: Knuth puts fields at fixed offsets on a line, while this implementation expects them to be separated by whitespace\&. (Purists may wish to fix this obvious bug\&.) Since the ALF directive, which defines constant strings, becomes ambiguous when delimited by whitespace, there\*(Aqs a new syntax to achieve the same effect\&. Instead of
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+	ALF	 rime
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+use
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+	CON	" rime"
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.SH "BUGS"
+.PP
+This
+MIXAL
+implementation does not do floating\-point\&. The tape devices are not implemented\&.
+.SH "AUTHOR"
+.PP
+This
+MIXAL
+implementation was designed and written by Darius Bacon, and then ported to Unixish systems and debugged by Eric S\&. Raymond\&. This version includes corrections to multiplication and division by Larry Gately\&. This manual page was written for Debian by Antti\-Juhani Kaijanaho, with changes by Darius Bacon and Eric S\&. Raymond\&.
+.PP
+The MIXAL language was designed by Donald Knuth\&. We gratefully acknowledge the general permission granted by Dr\&. Knuth and Addison\-Wesley to redistribute MIX documentation and examples from
+The Art of Computer Programming
+in connection with open\-source implementations of the language and under the license terms of those implementations\&.
+.SH "SEE ALSO"
+.PP
+The files
+/usr/share/doc/mixal/README
+and
+/usr/share/doc/mixal/NOTES
+contain some information about this
+MIXAL
+implementation\&.
+.PP
+A description of the
+MIX
+system and the
+MIXAL
+language can be found in Donald E\&. Knuth\*(Aqs book
+The Art of Computer Programming, Volume 1:
+Fundamental Algorithms; 3rd Edition (Addison\-Wesley 1997)\&. (Or see the home page at
+\m[blue]\fBhttp://www\-cs\-faculty\&.stanford\&.edu/~knuth/taocp\&.html\fR\m[]\&.)
